@@ -14,6 +14,7 @@ The following hardware is tested and documented here.
 
 - [Home Assistant Green](https://www.home-assistant.io/green/)
 - [EnOcean USB 300](https://www.enocean.com/en/product/usb-300/)
+  - This is seen as `/dev/ttyUSB0` in the instructions later. If you have a different RF module, you might need to change this.
 
 ### Switches
 
@@ -22,9 +23,8 @@ The following hardware is tested and documented here.
 
 ### Dimmers
 
-- **Eltako FUD61NPN** dimmer
-- **Eltako FRGBW71L** 4-channel dimmer
-- **Eltako FSUD-230V** wall socket dimmer
+- **Eltako FSUD** wall socket dimmer (11/14 and later)
+- **Eltako FUD61NPN** dimmer without wired connection to the wall switch
 
 ## Home Assistant
 
@@ -53,7 +53,7 @@ The following hardware is tested and documented here.
     binary_sensor:
       - platform: enocean
         id: [0xFE,0xFD,0x6E,0x1F]
-        name: EnOcean switch
+        name: EnOcean switch 1
     ```
 
 6. Restart Home Assistant ([Developer tools > YAML](http://homeassistant.local:8123/developer-tools/yaml) > Restart > Restart Home Assistant). If you are a little shy, you can also press the check configuration button.
@@ -63,4 +63,144 @@ The following hardware is tested and documented here.
     - Events to subscribe to: `button_pressed`
     - Start listening
 
-8. Repeat with all of your buttons
+8. Repeat steps 2-5 with all of your buttons, and restart your Home Assistant. You don't need to repeat `binary_sensor:` when adding switches. Your file will look like this with your names and ids:
+
+    ```yaml
+    binary_sensor:
+      - platform: enocean
+        name: EnOcean switch 1
+        id: [0xFE,0xFD,0x6E,0x1F]
+      - platform: enocean
+        name: EnOcean switch 2
+        id: [0xFE,0xFD,0x6E,0x2F]
+    ```
+
+## Prepare Home Assistant for teaching
+
+1. Go to [Terminal](http://homeassistant.local:8123/a0d7b954_ssh).
+2. Run the following command to install necessary Python plugins
+
+    ```zsh
+    pip3 install enocean
+    ```
+
+3. Obtain the EnOcean **sender id**. This is the base id for all the devices you will teach later. Each device will receive individual sender id.
+
+    ```zsh
+    python3 -c "from enocean.communicators.serialcommunicator import SerialCommunicator; c = SerialCommunicator(port='/dev/ttyUSB0'); c.start(); hex_list_str = '[' + ', '.join(f'{b:#04x}' for b in c.base_id) + ']'; print('Base ID:', hex_list_str); c.stop()"
+    ```
+
+4. Notice the output `Base ID: [0xff, 0xd3, 0x6e, 0x80]`. You have **128 sender ids** you can assign starting from this id. In this document, base `[0xff, 0xd3, 0x6e, 0x80]` will be used in the examples.
+
+## Add dimmers
+
+The dimmers need to be paired with Home Assistant. Every dimmer has two ids:
+
+- One it is teached to receive from Home Assistant (`sender_id`)
+- One built-in for sending its status back to Home Assistant (`id`)
+
+1. **Clear** the dimmer memory contents completely to prevent it registering unwanted control signals.
+   - [FSUD](#clearing-fsud)
+   - [FUD61NPN](#clearing-fud61npn)
+2. Obtain the **device id** to be configured as `id` later. This is applicaple only for the following devices.
+   - [FSUD](#get-fsud-id)
+3. Take a **new sender id** by changing the last hexadecimal number in your **base sender id**. Write this id down. In this example it is `[0xff, 0xd3, 0x6f, 0x81]`.
+4. Put the device in **teaching mode**.
+   - [FSUD](#teaching-fsud)
+   - [FUD61NPN](#teaching-fud61npn)
+5. In Home Assistant [Terminal](http://homeassistant.local:8123/a0d7b954_ssh), run the following command replacing first `my_id = [0xff, 0xd3, 0x6f, 0x81]` with the id you want to be teached:
+
+    ```bash
+    python3 -c "import time;
+    from enocean.communicators.serialcommunicator import SerialCommunicator;
+    from enocean.protocol.packet import RadioPacket;
+    from enocean.protocol.constants import PACKET, RORG;
+    c = SerialCommunicator(port='/dev/ttyUSB0');
+    c.start();
+    my_id = [0xff, 0xd3, 0x6f, 0x81];
+    print(f'TEACHING WITH ID: {my_id}');
+    p = RadioPacket(PACKET.RADIO_ERP1, data=[0]*10, optional=[0]*7);
+    p.optional = [];
+    print('1. Sending Eltako GFVS Signature...');
+    p.data = [RORG.BS4, 0xE0, 0x40, 0x0D, 0x80] + my_id + [0x00];
+    c.send(p); time.sleep(1); c.stop(); print('Done.')"
+    ```
+
+6. The LED goes out.
+7. Configure the device id (`id`) and teached sender id (`sender_id`) into your `configuration.yaml` ([File Editor](http://homeassistant.local:8123/core_configurator/ingress) > Browse Filesystem > configuration.yaml). If you couldn't obtain the device id, you can make it up. Just be sure each device has different id:
+
+    ```yaml
+    light:
+      - platform: enocean
+        name: FUD61 hallway
+        id: [110,0,0,1] # N/A
+        sender_id: [0xFF,0xD3,0x6E,0x81]
+    ```
+
+8. **Restart** Home Assistant ([Developer tools > YAML](http://homeassistant.local:8123/developer-tools/yaml) > Restart > Restart Home Assistant). Check the config if you don't feel confident.
+
+### Instructions per device
+
+#### FSUD
+
+##### Clearing FSUD
+
+1. Press the left button **LRN/CLR** for approximately **3 seconds**, the LED flashes exitedly.
+2. Press the right button **ON/OFF** approximately **5 seconds**, the LED goes out.
+3. All taught-in sensors are cleared, the repeater and the confirmation telegrams are switched off.
+
+##### Get FSUD id
+
+1. In the EnOcean configuration, enable debug logging. ([Settings > Devices & Services > EnOcean](http://homeassistant.local:8123/config/integrations/integration/enocean) > upper right ⠇ > Enable debug logging)
+
+2. Press a button in your dimmer
+
+3. Open the logs ([Settings > System > Logs](http://homeassistant.local:8123/config/logs)). Select Home Assistant Core and select Show Full Logs. You should see a line: `[homeassistant.components.enocean.dongle] Received radio packet: FE:FD:6E:2F->FF:FF:FF:FF (-70 dBm): 0x01`...
+
+4. Please note the four bytes in the beginning. In my case FE:FD:6E:2F
+
+##### Teaching FSUD
+
+1. Press and hold the left button **LRN/CLR** for approx. **0.5 seconds** and then release. The LED lights up.
+2. Press the right button **ON/OFF** briefly once. The LED flashes once as confirmation.
+
+#### FUD61NPN
+
+##### Clearing FUD61NPN
+
+1. Set the **upper** rotary switch to **CLR**. The LED flashes at a high rate.
+
+2. Within the next 10 seconds, turn the **lower** rotary switch **three times** to the **right stop** (turn clockwise) and then turn back away from the stop. The LED stops flashing and goes out after 2 seconds.
+
+3. All taught-in sensors are cleared.
+
+## Pairing your switches to the dimmers in Home Assistant
+
+1. Go to Settings > [Automations & scenes](http://homeassistant.local:8123/config/automation/dashboard)
+2. Take one of your **button id**s you have stored, and replace it later to the place of `[0xFE,0xFD,0x6E,0x1F]`
+3. Create automation for **turning on** the lights. Select Create automation > Create new automation
+    - When > Add trigger > Manual event > Manual event
+      - Event type: `button_pressed`
+      - Event data:
+
+        ```yaml
+          id: [0xFE,0xFD,0x6E,0x1F]
+          pushed: 0
+          which: 1
+          onoff: 0
+        ```
+
+        where
+          - `id` is your button id
+          - `pushed` is always `0`
+          - `which` is `0` for left in 4-way rocker, and `1` for right in 4-way rocker. If you have only one rocker in your wall switch, it's the right one (`1`)
+          - `onoff` is `0` for up, and `1` for down
+
+        If these instructions were not clear, Event viewer will show you these values.
+    - Then > Add action > Light > Turn on > Add target, and select your lights you want to turn on.
+4. Create another automation for **turning off** the lights by repeating the step above. Change `onoff` to `1` for pressing the rocker down.
+5. Repeat all the steps for each switch-light combination, and you are done.
+
+## Finalization
+
+Back up your settings, and you can disable your SSH and file Add-ons to make security attacks a little less likely.
