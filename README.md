@@ -1,4 +1,4 @@
-# Documentation about using EnOcean devices in Home Assiastant
+# Using EnOcean devices in Home Assiastant
 
 Motiviation collecting this information was that Mount Kelvin went out of market. It was a startup creating a proprietary light control system using mostly EnOcean devices.
 
@@ -18,11 +18,12 @@ The following hardware is tested and documented here.
 
 ### Switches
 
-- **Eltako FT55** wall switch with 2-way or 4-way panel
 - **Eltako FMH4** 4-way rocker switch
+- **Eltako FT55** wall switch with 2-way or 4-way panel
 
 ### Dimmers
 
+- **Eltako FRGBW71L** 4-channel dimmer
 - **Eltako FSUD** wall socket dimmer (11/14 and later)
 - **Eltako FUD61NPN** dimmer without wired connection to the wall switch
 
@@ -87,7 +88,10 @@ The following hardware is tested and documented here.
 3. Obtain the EnOcean **sender id**. This is the base id for all the devices you will teach later. Each device will receive individual sender id.
 
     ```zsh
-    python3 -c "from enocean.communicators.serialcommunicator import SerialCommunicator; c = SerialCommunicator(port='/dev/ttyUSB0'); c.start(); hex_list_str = '[' + ', '.join(f'{b:#04x}' for b in c.base_id) + ']'; print('Base ID:', hex_list_str); c.stop()"
+    python3 -c "from enocean.communicators.serialcommunicator import SerialCommunicator;
+    c = SerialCommunicator(port='/dev/ttyUSB0'); c.start();
+    hex_list_str = '[' + ', '.join(f'{b:#04x}' for b in c.base_id) + ']'; print('Base ID:', hex_list_str);
+    c.stop()"
     ```
 
 4. Notice the output `Base ID: [0xff, 0xd3, 0x6e, 0x80]`. You have **128 sender ids** you can assign starting from this id. In this document, base `[0xff, 0xd3, 0x6e, 0x80]` will be used in the examples.
@@ -100,12 +104,14 @@ The dimmers need to be paired with Home Assistant. Every dimmer has two ids:
 - One built-in for sending its status back to Home Assistant (`id`)
 
 1. **Clear** the dimmer memory contents completely to prevent it registering unwanted control signals.
+   - [FRGBW71L](#clearing-frgbw71l)
    - [FSUD](#clearing-fsud)
    - [FUD61NPN](#clearing-fud61npn)
-2. Obtain the **device id** to be configured as `id` later. This is applicaple only for the following devices.
+2. Obtain the **device id** to be configured as `id` later. This is applicaple only for the following device.
    - [FSUD](#get-fsud-id)
 3. Take a **new sender id** by changing the last hexadecimal number in your **base sender id**. Write this id down. In this example it is `[0xff, 0xd3, 0x6f, 0x81]`.
 4. Put the device in **teaching mode**.
+   - [FRGBW71L](#teaching-frgbw71l)
    - [FSUD](#teaching-fsud)
    - [FUD61NPN](#teaching-fud61npn)
 5. In Home Assistant [Terminal](http://homeassistant.local:8123/a0d7b954_ssh), run the following command replacing first `my_id = [0xff, 0xd3, 0x6f, 0x81]` with the id you want to be teached:
@@ -141,6 +147,23 @@ The dimmers need to be paired with Home Assistant. Every dimmer has two ids:
 
 ### Instructions per device
 
+#### FRGBW71L
+
+##### Clearing FRGBW71L
+
+1. Set the **middle** rotary switch to **CLR**. The LED flashes at a high rate.
+2. Within the next 10 seconds, turn the **upper** rotary switch **three times** to the **right stop** (turn clockwise) and then turn back away
+from the stop. The LED stops flashing and goes out after 2 seconds.
+3. All taught-in sensors are cleared.
+
+##### Teaching FRGBW71L
+
+1. Set the **top** rotary switch to **10**
+2. Turn the **lower** rotary switch to the required channel **1** to **4**. Each RGBW channel needs to be teached separately to separate sender id
+3. Set the **middle** rotary switch to **LRN**. The LED flashes at a low rate.
+4. Teach
+5. After teaching, turn the **middle** rotary switch away from **LRN**
+
 #### FSUD
 
 ##### Clearing FSUD
@@ -174,6 +197,11 @@ The dimmers need to be paired with Home Assistant. Every dimmer has two ids:
 
 3. All taught-in sensors are cleared.
 
+##### Teaching FUD61NPN
+
+1. It doesn't matter where the **lower** rotary switch is.
+2. Set the **upper** rotary switch to **LRN**. The LED flashes at a low rate.
+
 ## Pairing your switches to the dimmers in Home Assistant
 
 1. Go to Settings > [Automations & scenes](http://homeassistant.local:8123/config/automation/dashboard)
@@ -185,14 +213,14 @@ The dimmers need to be paired with Home Assistant. Every dimmer has two ids:
 
         ```yaml
           id: [0xFE,0xFD,0x6E,0x1F]
-          pushed: 0
+          pushed: 1
           which: 1
           onoff: 0
         ```
 
         where
           - `id` is your button id
-          - `pushed` is always `0`
+          - `pushed` is always `1`
           - `which` is `0` for left in 4-way rocker, and `1` for right in 4-way rocker. If you have only one rocker in your wall switch, it's the right one (`1`)
           - `onoff` is `0` for up, and `1` for down
 
