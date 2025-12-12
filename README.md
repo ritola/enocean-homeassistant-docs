@@ -107,8 +107,9 @@ The dimmers need to be paired with Home Assistant. Every dimmer has two ids:
    - [FRGBW71L](#clearing-frgbw71l)
    - [FSUD](#clearing-fsud)
    - [FUD61NPN](#clearing-fud61npn)
-2. Obtain the **device id** to be configured as `id` later. This is applicaple only for the following device.
+2. Obtain the **device id** to be configured as `id` later.
    - [FSUD](#get-fsud-id)
+   - [FUD61NPN](#get-fud61npn-id)
 3. Take a **new sender id** by changing the last hexadecimal number in your **base sender id**. Write this id down. In this example it is `[0xff, 0xd3, 0x6f, 0x81]`.
 4. Put the device in **teaching mode**.
    - [FRGBW71L](#teaching-frgbw71l)
@@ -139,7 +140,7 @@ The dimmers need to be paired with Home Assistant. Every dimmer has two ids:
     light:
       - platform: enocean
         name: FUD61 hallway
-        id: [110,0,0,1] # N/A
+        id: [0x01, 0x8D, 0x6F, 0x16]
         sender_id: [0xFF,0xD3,0x6E,0x81]
     ```
 
@@ -197,10 +198,18 @@ from the stop. The LED stops flashing and goes out after 2 seconds.
 
 3. All taught-in sensors are cleared.
 
+##### Get FUD61NPN id
+
+1. Look the sticker at the bottom of your FUD61NPN
+2. The id for Home Assistant is 8 digit hexadecimal number. If you have 7 number sticker, you need to add 0 in the front of it. The id should be converted to 4 hexadecimal numbers. For example sticker 18D6F16 becomes `[0x01, 0x8D, 0x6F, 0x16]`.
+3. If you don't have it, you can make this up, but remember to make it unique. It also appeared that the last number needs to be even if you make this up.
+
 ##### Teaching FUD61NPN
 
 1. It doesn't matter where the **lower** rotary switch is.
 2. Set the **upper** rotary switch to **LRN**. The LED flashes at a low rate.
+3. Teach
+4. After teaching, set the **lower** rotary switch to **Auto**, and **upper** rotary switch in the **middle** of the travel
 
 ## Pairing your switches to the dimmers in Home Assistant
 
