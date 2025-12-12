@@ -2,9 +2,16 @@
 
 Motiviation collecting this information was that Mount Kelvin went out of market. It was a startup creating a proprietary light control system using mostly EnOcean devices.
 
-This is not yet a completely drop-in replacement for Mount Kelvin. With this documentation and a lot of enthusiasm, you can get a complete system controlling your EnOcean lights.
+This is not yet a completely drop-in replacement for Mount Kelvin. With this documentation and a lot of enthusiasm, you can get a complete system controlling your EnOcean lights. These instructions are not a collection of everything you can do with your devices, but just for pairing these two.
 
-This documentation uses links to the local Home Assistant server running in the **port 8123**. These instructions are written using **Home Assistant Core 2025.12.2**.
+Please let the authors of this document to know what you found with your devices in the Issues-section of this repository, or with having a pull-rewquest. Let these examples to inspire you to help to make this documentation better:
+
+- With FSUD dimmer, the instructions were to check the id sticker on the device. If you didn't have the sticker, you needed a way to obtain it. This is documented here.
+- With Eltako USB 300, the instructions were also to check the id sticker. You might have one, but it might be completely misleading. The sticker id is not the id to use in Home Assistant. This document has a way to get the id you need in Home Assistant, whether you don't have the sticker, you have the wrong id in it, or even if you have a correct sticker with the correct id.
+
+All these findings will help to make these instructions better.
+
+This documentation has links into different parts of Home Assistant. If you want to use these links, make sure you are in the same network with your Home Assistant, and it is running in the address http://homeassistant.local:8123/. The Home Assistant version in the time of writing was **2025.12.2**.
 
 ## Hardware
 
@@ -14,7 +21,7 @@ The following hardware is tested and documented here.
 
 - [Home Assistant Green](https://www.home-assistant.io/green/)
 - [EnOcean USB 300](https://www.enocean.com/en/product/usb-300/)
-  - This is seen as `/dev/ttyUSB0` in the instructions later. If you have a different RF module, you might need to change this.
+  - This is located in the device path `/dev/ttyUSB0`. If you have a different RF module, you might need to change this serial port path in the commands in this document.
 
 ### Switches
 
@@ -29,12 +36,14 @@ The following hardware is tested and documented here.
 
 ## Home Assistant
 
+Prepare your Home Assistant for EnOcean
+
 1. You need to install the following add-ons ([Settings > Add-ons](http://homeassistant.local:8123/hassio/dashboard) > Add-on store) to your Home Assistant:
 
     - [Advanced SSH & Web Terminal](http://homeassistant.local:8123/hassio/addon/a0d7b954_ssh/info) to access the command line
     - [File Editor](http://homeassistant.local:8123/hassio/addon/core_configurator/info) to edit `configuration.yaml`
 
-2. Plug the dongle in
+2. Your EnOcean USB 300 dongle should be plugged in
 
 3. Add an EnOcean device ([Settings > Devices & Services](http://homeassistant.local:8123/config/integrations/dashboard) > Add Integration > EnOcean)
 
@@ -59,12 +68,12 @@ The following hardware is tested and documented here.
 
 6. Restart Home Assistant ([Developer tools > YAML](http://homeassistant.local:8123/developer-tools/yaml) > Restart > Restart Home Assistant). If you are a little shy, you can also press the check configuration button.
 
-7. You can check it went all ok by checking the events and pressing the switch. The events can be listened in the Events tool ([Developer tools > Events](http://homeassistant.local:8123/developer-tools/event))
+7. You can check it is working, by listening the events and pressing the switch. The events can be listened in the Events tool ([Developer tools > Events](http://homeassistant.local:8123/developer-tools/event))
     - Listen to events
     - Events to subscribe to: `button_pressed`
     - Start listening
 
-8. Repeat steps 2-5 with all of your buttons, and restart your Home Assistant. You don't need to repeat `binary_sensor:` when adding switches. Your file will look like this with your names and ids:
+8. Repeat steps 2-5 with all of your buttons, and restart your Home Assistant. You don't need to repeat the line `binary_sensor:` when adding switches. Your file will look like this with your names and ids:
 
     ```yaml
     binary_sensor:
@@ -100,8 +109,8 @@ The following hardware is tested and documented here.
 
 The dimmers need to be paired with Home Assistant. Every dimmer has two ids:
 
-- One it is teached to receive from Home Assistant (`sender_id`)
-- One built-in for sending its status back to Home Assistant (`id`)
+- `sender_id` is teached to the device to receive commands from Home Assistant
+- `id` is used for receiving status from the device to Home Assistant, not all devices need this
 
 1. **Clear** the dimmer memory contents completely to prevent it registering unwanted control signals.
    - [FRGBW71L](#clearing-frgbw71l)
