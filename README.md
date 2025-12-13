@@ -250,3 +250,31 @@ from the stop. The LED stops flashing and goes out after 2 seconds.
 ## Finalization
 
 Back up your settings, and you can disable your SSH and file Add-ons to make security attacks a little less likely.
+
+## Tips
+
+### Controlling a light from the command line
+
+You can get faster feedback that your teaching was successful by controlling your light from the command line. The following command sets the brightness to 40% for the light paired with the sender id `[0xff, 0xd3, 0x6f, 0x81]`. A LED in the dimmer should flash once when running this command.
+
+```zsh
+python3 -c "import time;
+from enocean.communicators.serialcommunicator import SerialCommunicator;
+from enocean.protocol.packet import RadioPacket;
+from enocean.protocol.constants import PACKET, RORG;
+c = SerialCommunicator(port='/dev/ttyUSB0'); c.start();
+my_id = [0xff, 0xd3, 0x6f, 0x81];
+p = RadioPacket(PACKET.RADIO_ERP1, data=[0]*10, optional=[0]*7);
+p.data = [RORG.BS4, 0x02, 40, 0x00, 0x09] + my_id + [0x00];
+p.optional = []; c.send(p);
+print('Dimmed to 40%');
+time.sleep(1); c.stop()"
+```
+
+### Conflict using the serial port
+
+When operating the USB dongle both from the command line and from the Home Assistant EnOcean module, one of them might become inoperable. You may see the following line on [Settings > System > Logs](http://homeassistant.local:8123/config/logs):
+
+> Serial port exception! (device disconnected or multiple access on port?)
+
+You can fix this by disabling and enabling EnOcean module, or just rebooting your Home Assistant.
